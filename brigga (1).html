@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brigga</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍸</text></svg>">
+  <meta name="theme-color" content="#0b1120">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #0b1120;
+      background-image: 
+        linear-gradient(rgba(11, 17, 32, 0.78), rgba(11, 17, 32, 0.78)),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100" fill="none"><path fill="%23475569" fill-opacity="0.28" d="M0 50 Q37.5 18 75 50 T150 50 T225 50 T300 50 V100 H0 Z"/><path fill="%23475569" fill-opacity="0.18" d="M0 68 Q37.5 38 75 68 T150 68 T225 68 T300 68 V100 H0 Z"/></svg>');
+      background-size: 100% 100%, 260px 85px;
+      background-repeat: repeat;
+    }
+    .font-display { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+    .section-card { background-color: #1e2937; border: 1px solid #334155; }
+    .zen-text { color: #64748b; }
+    
+    .check-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 9px;
+      color: #94a3b8;
+      cursor: pointer;
+      min-width: 52px;
+    }
+    .check-label input {
+      width: 16px;
+      height: 16px;
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+    .check-label.done { color: #4ade80; }
+    
+    .content-row {
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .content-row.removing {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    
+    .goal-huge {
+      font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+      line-height: 1.35;
+      font-weight: 500;
+      color: #f1f5f9;
+    }
+    .goal-huge textarea {
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      width: 100%;
+      color: inherit;
+      font: inherit;
+      line-height: inherit;
+    }
+    
+    .agenda-scroll {
+      max-height: 62vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #334155 transparent;
+    }
+    .agenda-scroll::-webkit-scrollbar { width: 6px; }
+    .agenda-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+    
+    .day-header {
+      position: sticky;
+      top: 0;
+      background: #1e2937;
+      z-index: 5;
+      padding: 10px 0 6px;
+      border-bottom: 1px solid #334155;
+    }
+    
+    .idea-featured {
+      font-size: 1.15rem;
+      line-height: 1.5;
+      font-style: italic;
+      color: #e2e8f0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="text-slate-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-x-4">
+        <div class="w-14 h-14 rounded-full bg-emerald-900/60 flex items-center justify-center text-3xl">🍸</div>
+        <div>
+          <h1 class="font-display text-3xl tracking-tighter">Brigga</h1>
+          <p class="zen-text text-xs -mt-1">Music progress · you + Gustavo</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUGE GOALS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+      <div class="section-card rounded-3xl p-6 md:p-8">
+        <div class="text-xs uppercase tracking-widest text-emerald-400 font-medium mb-4">Biggest Music Goal</div>
+        <div class="goal-huge">
+          <textarea id="goal-music" rows="3" placeholder="Write the main music goal here…" onblur="saveGoals()"></textarea>
+        </div>
+      </div>
+      <div class="section-card rounded-3xl p-6 md:p-8">
+        <div class="text-xs uppercase tracking-widest text-sky-400 font-medium mb-4">Biggest Social Goal</div>
+        <div class="goal-huge">
+          <textarea id="goal-social" rows="3" placeholder="Write the main social / content goal here…" onblur="saveGoals()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDA + IDEAS -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- AGENDA (scrollable, always shows dates) -->
+      <div class="lg:col-span-8 section-card rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-medium text-slate-300">Agenda</h2>
+          <span class="text-xs text-slate-500" id="active-count">0 active pieces</span>
+        </div>
+        
+        <div id="agenda" class="agenda-scroll space-y-1 pr-1">
+          <!-- days injected -->
+        </div>
+      </div>
+
+      <!-- IDEAS -->
+      <div class="lg:col-span-4 space-y-4">
+        <!-- Featured random idea -->
+        <div class="section-card rounded-3xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-xs uppercase tracking-wider text-amber-400 font-medium">Idea of the moment</div>
+            <button onclick="showRandomIdea()" class="text-xs px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg">🎲</button>
+          </div>
+          <div id="random-idea" class="idea-featured border border-slate-700/80 rounded-2xl bg-slate-900/50 px-4 py-5 min-h-[88px] flex items-center justify-center">
+            —
+          </div>
+        </div>
+
+        <!-- All ideas list -->
+        <div class="section-card rounded-3xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-xs uppercase tracking-wider text-slate-400 font-medium">All ideas</div>
+            <button onclick="openIdeaModal()" class="text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl">+ Add</button>
+          </div>
+          <div id="ideas-list" class="space-y-2 max-h-[42vh] overflow-y-auto pr-1">
+            <!-- ideas injected -->
+          </div>
+          <p class="text-center text-xs text-slate-600 mt-3" id="idea-count"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Content Modal (pre-filled with a date) -->
+  <div id="content-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display text-xl">Add content</h3>
+        <button onclick="closeContentModal()" class="text-slate-400 hover:text-white text-xl px-2">×</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Title / piece</label>
+          <input type="text" id="content-title" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-500" placeholder="e.g. Azul – vertical teaser">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Date</label>
+          <input type="date" id="content-date" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-500">
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-5">
+        <button onclick="closeContentModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm">Cancel</button>
+        <button onclick="saveContent()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Idea Modal -->
+  <div id="idea-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-md">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display text-xl">New idea</h3>
+        <button onclick="closeIdeaModal()" class="text-slate-400 hover:text-white text-xl px-2">×</button>
+      </div>
+      <textarea id="idea-input" rows="4" class="w-full bg-slate-800 border border-slate-600 rounded-2xl p-4 text-sm outline-none focus:border-emerald-500 resize-none" placeholder="Drop an idea for later..."></textarea>
+      <div class="flex justify-end gap-3 mt-4">
+        <button onclick="closeIdeaModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm">Cancel</button>
+        <button onclick="addIdea()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STAGES = [
+      { key: 'scripted',  label: 'Scripted' },
+      { key: 'materials', label: 'Materials (G)' },
+      { key: 'recorded',  label: 'Recorded' },
+      { key: 'edited',    label: 'Edited' },
+      { key: 'posted',    label: 'Posted' }
+    ];
+
+    // How many days to show in the agenda (past + future)
+    // DAYS_BACK = 3 → today, yesterday, 2 days ago, 3 days ago are shown
+    // Anything from 4 days ago or older is hidden from the calendar
+    const DAYS_BACK = 3;
+    const DAYS_FORWARD = 21;
+
+    let data = JSON.parse(localStorage.getItem('brigga_data')) || {
+      contents: [],
+      goals: { music: '', social: '' },
+      ideas: []
+    };
+
+    function save() {
+      localStorage.setItem('brigga_data', JSON.stringify(data));
+    }
+
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function addDays(iso, n) {
+      const d = new Date(iso + 'T12:00:00');
+      d.setDate(d.getDate() + n);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function formatDateHeader(iso) {
+      const d = new Date(iso + 'T12:00:00');
+      const today = todayISO();
+      const tomorrow = addDays(today, 1);
+      const yesterday = addDays(today, -1);
+      
+      let label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (iso === today) label = 'Today · ' + label;
+      else if (iso === tomorrow) label = 'Tomorrow · ' + label;
+      else if (iso === yesterday) label = 'Yesterday · ' + label;
+      return label;
+    }
+
+    function isComplete(item) {
+      return STAGES.every(s => item[s.key]);
+    }
+
+    function escapeAttr(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // ==================== RENDER ====================
+    function render() {
+      // Goals
+      document.getElementById('goal-music').value = data.goals.music || '';
+      document.getElementById('goal-social').value = data.goals.social || '';
+
+      // Visible date window: today-3 → today+21 (4+ days ago are hidden)
+      const start = addDays(todayISO(), -DAYS_BACK);
+      const visibleDates = new Set();
+      for (let i = 0; i <= DAYS_BACK + DAYS_FORWARD; i++) {
+        visibleDates.add(addDays(start, i));
+      }
+
+      // Only incomplete items that are still inside the window
+      const active = data.contents.filter(c => !isComplete(c) && visibleDates.has(c.date));
+      document.getElementById('active-count').textContent = active.length + ' active pieces';
+
+      // Agenda: always show the fixed range of days
+      const agendaEl = document.getElementById('agenda');
+      let html = '';
+
+      for (let i = 0; i <= DAYS_BACK + DAYS_FORWARD; i++) {
+        const date = addDays(start, i);
+        const dayItems = active.filter(c => c.date === date);
+        const isToday = date === todayISO();
+
+        html += `
+          <div class="mb-4">
+            <div class="day-header flex items-center justify-between">
+              <div class="text-sm font-medium ${isToday ? 'text-emerald-400' : 'text-slate-400'}">
+                ${formatDateHeader(date)}
+              </div>
+              <button onclick="addContentToDate('${date}')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-emerald-800 text-slate-400 hover:text-white transition">
+                + Add
+              </button>
+            </div>
+            <div class="mt-2 space-y-2">
+              ${dayItems.length === 0 
+                ? `<div class="text-xs text-slate-600 py-1 pl-1">—</div>`
+                : dayItems.map(item => renderContentRow(item)).join('')
+              }
+            </div>
+          </div>
+        `;
+      }
+
+      agendaEl.innerHTML = html;
+
+      // Ideas list
+      renderIdeasList();
+    }
+
+    function renderContentRow(item) {
+      const checks = STAGES.map(s => {
+        const checked = item[s.key] ? 'checked' : '';
+        const doneClass = item[s.key] ? 'done' : '';
+        return `
+          <label class="check-label ${doneClass}">
+            <input type="checkbox" ${checked} onchange="toggleStage(${item.id}, '${s.key}', this.checked)">
+            <span>${s.label}</span>
+          </label>
+        `;
+      }).join('');
+
+      return `
+        <div class="content-row flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-2xl bg-slate-800/70 border border-slate-700/50" data-id="${item.id}">
+          <div class="flex-1 min-w-0">
+            <input type="text" value="${escapeAttr(item.title)}" 
+              class="bg-transparent border-b border-transparent hover:border-slate-600 focus:border-emerald-500 outline-none w-full text-sm font-medium"
+              onchange="updateTitle(${item.id}, this.value)"
+              placeholder="Content title">
+          </div>
+          <div class="flex flex-wrap gap-1 justify-start sm:justify-end">
+            ${checks}
+          </div>
+          <button onclick="removeContent(${item.id})" class="text-red-400/60 hover:text-red-400 text-xs px-1.5 self-start sm:self-center" title="Delete">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderIdeasList() {
+      const list = document.getElementById('ideas-list');
+      const countEl = document.getElementById('idea-count');
+
+      if (!data.ideas.length) {
+        list.innerHTML = `<div class="text-sm text-slate-600 py-4 text-center">No ideas yet</div>`;
+        countEl.textContent = '';
+        return;
+      }
+
+      list.innerHTML = data.ideas.map((idea, idx) => `
+        <div class="flex items-start gap-2 p-3 rounded-xl bg-slate-800/50 border border-slate-700/40 group">
+          <div class="flex-1 text-sm text-slate-300 leading-snug">${escapeAttr(idea)}</div>
+          <button onclick="removeIdea(${idx})" class="text-slate-600 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition px-1">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      `).join('');
+
+      countEl.textContent = data.ideas.length + ' idea' + (data.ideas.length === 1 ? '' : 's');
+    }
+
+    // ==================== CONTENT ====================
+    function addContentToDate(date) {
+      document.getElementById('content-title').value = '';
+      document.getElementById('content-date').value = date;
+      document.getElementById('content-modal').classList.remove('hidden');
+      document.getElementById('content-title').focus();
+    }
+
+    function closeContentModal() {
+      document.getElementById('content-modal').classList.add('hidden');
+    }
+
+    function saveContent() {
+      const title = document.getElementById('content-title').value.trim();
+      const date = document.getElementById('content-date').value || todayISO();
+      if (!title) {
+        document.getElementById('content-title').focus();
+        return;
+      }
+
+      data.contents.push({
+        id: Date.now(),
+        title,
+        date,
+        scripted: false,
+        materials: false,
+        recorded: false,
+        edited: false,
+        posted: false
+      });
+      save();
+      closeContentModal();
+      render();
+    }
+
+    function updateTitle(id, value) {
+      const item = data.contents.find(c => c.id === id);
+      if (item) {
+        item.title = value;
+        save();
+      }
+    }
+
+    function toggleStage(id, key, checked) {
+      const item = data.contents.find(c => c.id === id);
+      if (!item) return;
+      item[key] = checked;
+      save();
+
+      if (isComplete(item)) {
+        const row = document.querySelector(`.content-row[data-id="${id}"]`);
+        if (row) {
+          row.classList.add('removing');
+          setTimeout(() => render(), 350);
+        } else {
+          render();
+        }
+      } else {
+        render();
+      }
+    }
+
+    function removeContent(id) {
+      if (!confirm('Delete this content piece?')) return;
+      data.contents = data.contents.filter(c => c.id !== id);
+      save();
+      render();
+    }
+
+    // ==================== GOALS ====================
+    function saveGoals() {
+      data.goals.music = document.getElementById('goal-music').value;
+      data.goals.social = document.getElementById('goal-social').value;
+      save();
+    }
+
+    // ==================== IDEAS ====================
+    function showRandomIdea() {
+      const el = document.getElementById('random-idea');
+      if (!data.ideas.length) {
+        el.textContent = 'No ideas yet — add one.';
+        return;
+      }
+      const idx = Math.floor(Math.random() * data.ideas.length);
+      el.textContent = '“' + data.ideas[idx] + '”';
+    }
+
+    function openIdeaModal() {
+      document.getElementById('idea-input').value = '';
+      document.getElementById('idea-modal').classList.remove('hidden');
+      document.getElementById('idea-input').focus();
+    }
+
+    function closeIdeaModal() {
+      document.getElementById('idea-modal').classList.add('hidden');
+    }
+
+    function addIdea() {
+      const text = document.getElementById('idea-input').value.trim();
+      if (!text) return;
+      data.ideas.push(text);
+      save();
+      closeIdeaModal();
+      renderIdeasList();
+      showRandomIdea();
+    }
+
+    function removeIdea(idx) {
+      data.ideas.splice(idx, 1);
+      save();
+      renderIdeasList();
+      showRandomIdea();
+    }
+
+    // ==================== INIT ====================
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeContentModal();
+        closeIdeaModal();
+      }
+    });
+
+    render();
+    showRandomIdea(); // random idea every time the app is opened
+  </script>
+</body>
+</html>
